@@ -57,7 +57,7 @@ class SM2Curve extends elliptic.curve.short {
 	 *
 	 * @param {string} x - coordinate x in hex string
 	 * @param {string} y - coordinate y in hex string
-	 * @param {string} parity - determine the value of y, could be 'odd' or 'even' (default), ignored when y is not null
+	 * @param {string} [parity] - determine the value of y, could be 'odd' or 'even' (default), ignored when y is not null
 	 */
 	_sm2Point(x, y, parity) {
 		if (!x) {
@@ -92,8 +92,8 @@ class SM2Curve extends elliptic.curve.short {
 class SM2KeyPair {
 	/**
 	 * Either `pub` and `pri` can be a hex string or byte array or null.
-	 * @param pub - If `pub` is a string, it should be the same format as output of pubToString().
-	 * @param pri
+	 * @param {Array|string} pub - If `pub` is a string, it should be the same format as output of pubToString().
+	 * @param {BN|string} pri - BigNumber
 	 */
 	constructor(pub, pri) {
 		const SM2 = new SM2Curve(_sm2Params); // curve parameter
@@ -181,10 +181,10 @@ class SM2KeyPair {
 			case '00':
 				throw Error('public key should not be infinity');
 			case '02':
-				this.pub = this.curve._sm2Point(x, null, 'even');
+				this.pub = this.curve._sm2Point(x, undefined, 'even');
 				break;
 			case '03':
-				this.pub = this.curve._sm2Point(x, null, 'odd');
+				this.pub = this.curve._sm2Point(x, undefined, 'odd');
 				break;
 			case '04':
 			case '06':
@@ -213,10 +213,10 @@ class SM2KeyPair {
 			case 0x00:
 				throw Error('public key should not be infinity');
 			case 0x02:
-				this.pub = this.curve._sm2Point(x, null, 'even');
+				this.pub = this.curve._sm2Point(x, undefined, 'even');
 				break;
 			case 0x03:
-				this.pub = this.curve._sm2Point(x, null, 'odd');
+				this.pub = this.curve._sm2Point(x, undefined, 'odd');
 				break;
 			case 0x04:
 			case 0x06:
@@ -309,9 +309,9 @@ class SM2KeyPair {
 			throw Error('cannot sign message without private key');
 		}
 		if (typeof msg === 'string') {
-			return this.signDigest(new sm3().sum(this._combine(utils.strToBytes(msg))));
+			return this.signRaw(this._combine(utils.strToBytes(msg)));
 		} else {
-			return this.signDigest(new sm3().sum(this._combine(msg)));
+			return this.signRaw(this._combine(msg));
 		}
 	}
 
@@ -319,16 +319,17 @@ class SM2KeyPair {
 	 * Verify the signature (r,s)
 	 *
 	 * @param {string|buffer} msg
-	 * @param {string} r - signature.r part in hex string
-	 * @param {string} s - signature.s part in hex string
+	 * @param {{r:string, s:string}} signature - both r and s in hex format
 	 *
 	 * @return {boolean} true if verification passed.
 	 */
-	verify(msg, r, s) {
+	verify(msg, signature) {
 		if (!this.pub) {
 			throw Error('cannot verify signature without public key');
 		}
-		return this.verifyDigest(new sm3().sum(this._combine(msg)), r, s);
+		const {r, s} = signature;
+
+		return this.verifyRaw(this._combine(msg), r, s);
 	}
 
 	/**
@@ -456,12 +457,12 @@ class SM2KeyPair {
  * Generate a SM2 key pair
  */
 const genKeyPair = () => {
-	let pri = 0;
+	let pri;
 	const sm2Curve = new SM2Curve(_sm2Params);
 	const limit = sm2Curve.n.sub(new BN(2));
 	// generate 32 bytes private key in range [1, n-1]
 	do {
-		pri = new BN(_drbg.generate(32, 'hex', utils.random(64)));
+		pri = new BN(_drbg.generate(32));
 	} while (pri.cmp(limit) > 0);
 
 	return new SM2KeyPair(null, pri);
