@@ -1,0 +1,14 @@
+{
+  "name": "@hyperledger-twgc/node-gm",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "mocha test"
+  },
+  "dependencies": {
+    "bn.js": "^5.1.3",
+    "elliptic": "^6.5.3"
+  },
+  "devDependencies": {
+    "mocha": "latest"
+  }
+}
